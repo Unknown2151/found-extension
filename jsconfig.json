@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "checkJs": true,
+    "types": ["node", "svelte", "@types/chrome", "vitest"]
+  },
+  "include": ["src/**/*", "node_modules/@types/chrome/index.d.ts"],
+  "exclude": ["node_modules", "dist"]
+}
