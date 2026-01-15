@@ -52,6 +52,60 @@ export function importData(data) {
 }
 
 // --- Cloud sync scaffold (opt-in) ---
+export async function addCapturedNode(text, url) {
+  const nodesKey = 'found_nodes_v1';
+  const dbKey = 'found_db_all';
+
+  // 1. Get existing data
+  let nodes = [];
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    const data = await new Promise(res => chrome.storage.local.get([nodesKey], res));
+    nodes = data[nodesKey] || [];
+  } else {
+    // Fallback if somehow called in non-extension context
+    const raw = JSON.parse(localStorage.getItem(dbKey) || '{}');
+    nodes = raw[nodesKey] || [];
+  }
+
+  // 2. Create new node
+  const id = crypto.randomUUID();
+  const wordCount = text.trim().split(/\s+/).length;
+  let label = text.slice(0, 30) + (text.length > 30 ? '...' : '');
+  let notes = text;
+
+  if (wordCount < 7) {
+    label = text;
+    notes = '';
+  }
+
+  const newNode = {
+    id,
+    label,
+    notes,
+    notes_preview: notes ? notes.slice(0, 180) : '',
+    tags: [],
+    url: url || '',
+    created_at: new Date().toISOString()
+  };
+
+  // 3. Save back
+  const updatedNodes = [...nodes, newNode];
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    await chrome.storage.local.set({ [nodesKey]: updatedNodes });
+    // Also update the unified db for consistency if used
+    const dbData = await new Promise(res => chrome.storage.local.get([dbKey], res));
+    const db = dbData[dbKey] || {};
+    db[nodesKey] = updatedNodes;
+    await chrome.storage.local.set({ [dbKey]: db });
+  } else {
+    const db = JSON.parse(localStorage.getItem(dbKey) || '{}');
+    db[nodesKey] = updatedNodes;
+    localStorage.setItem(dbKey, JSON.stringify(db));
+  }
+
+  return newNode;
+}
+
 export function isCloudSyncEnabled() {
   return localStorage.getItem('found_sync_enabled') === '1';
 }
